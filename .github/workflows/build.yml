@@ -76,13 +76,9 @@ jobs:
           # برمجة عبد الله و عبد الرحمن هاني
           set $mod Mod4
           font pango:Noto Sans 10
-          # Win+Enter = فتح تيرمنال
           bindsym $mod+Return exec --no-startup-id xterm
-          # Win+G = تشغيل gnome-games
           bindsym $mod+g exec --no-startup-id gnome-games
-          # Win+M = تشغيل minetest
           bindsym $mod+m exec --no-startup-id minetest
-          # Win+Q = اغلاق الجهاز فورا
           bindsym $mod+q exec --no-startup-id shutdown -h now
           EOF
 
@@ -93,8 +89,10 @@ jobs:
           cp filesystem.squashfs iso/
           cp rootfs/boot/vmlinuz-* iso/vmlinuz
           cp rootfs/boot/initrd.img-* iso/initrd.img
-          echo 'set timeout=0' | sudo tee iso/boot/grub/grub.cfg
-          echo 'menuentry "KSO-HANI V34.FINAL11" { linux /vmlinuz boot=casper toram quiet splash nomodeset ---; initrd /initrd.img }' | sudo tee -a iso/boot/grub/grub.cfg
+          echo 'set timeout=5' | sudo tee iso/boot/grub/grub.cfg
+          echo 'set menu_color_normal=white/black' | sudo tee -a iso/boot/grub/grub.cfg
+          echo 'set menu_color_highlight=black/light-gray' | sudo tee -a iso/boot/grub/grub.cfg
+          echo 'menuentry "برمجة عبد الله و عبد الرحمن هاني [KSO]" { linux /vmlinuz boot=casper toram quiet splash nomodeset ---; initrd /initrd.img }' | sudo tee -a iso/boot/grub/grub.cfg
           sudo grub-mkrescue -o KSO-HANI-V34-FINAL11.iso iso
 
       - name: Upload ISO Artifact
