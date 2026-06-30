@@ -87,8 +87,8 @@ jobs:
           sudo mksquashfs rootfs filesystem.squashfs -e boot
           mkdir -p iso/boot/grub
           cp filesystem.squashfs iso/
-          cp rootfs/boot/vmlinuz-* iso/vmlinuz
-          cp rootfs/boot/initrd.img-* iso/initrd.img
+          sudo cp rootfs/boot/vmlinuz-* iso/vmlinuz
+          sudo cp rootfs/boot/initrd.img-* iso/initrd.img
           echo 'set timeout=5' | sudo tee iso/boot/grub/grub.cfg
           echo 'set menu_color_normal=white/black' | sudo tee -a iso/boot/grub/grub.cfg
           echo 'set menu_color_highlight=black/light-gray' | sudo tee -a iso/boot/grub/grub.cfg
