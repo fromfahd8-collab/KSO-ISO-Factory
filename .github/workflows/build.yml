@@ -1,0 +1,109 @@
+name: Build KSO-HANI V34.FINAL11 ISO
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      # الخطوة 1: تنزيل الكود
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # الخطوة 2: تثبيت الادوات
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin syslinux-utils python3-pip
+
+      # الخطوة 3: تثبيت بايثون
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: pip install pyyaml
+
+      # الخطوة 4: بناء نظام Ubuntu Noble 24.04
+      - name: Build base system with debootstrap
+        run: |
+          sudo debootstrap --arch=amd64 noble rootfs http://archive.ubuntu.com/ubuntu/
+
+      # الخطوة 5: تثبيت البرامج داخل النظام
+      - name: Install packages inside chroot
+        run: |
+          sudo chroot rootfs /bin/bash -c "
+          apt-get update -y && \
+          apt-get install -y --no-install-recommends \
+          linux-generic \
+          i3 \
+          gnome-games \
+          minetest \
+          network-manager \
+          xinit \
+          xserver-xorg \
+          initramfs-tools \
+          locales \
+          sudo \
+          bash \
+          coreutils \
+          fonts-noto \
+          xterm
+          "
+
+      # الخطوة 6: اعداد الدخول التلقائي روت بدون كلمة سر
+      - name: Setup autologin for root
+        run: |
+          sudo mkdir -p rootfs/etc/systemd/system/getty@tty1.service.d/
+          sudo tee rootfs/etc/systemd/system/getty@tty1.service.d/autologin.conf > /dev/null <<'EOF'
+          [Service]
+          ExecStart=
+          ExecStart=-/sbin/agetty --autologin root --noclear %I $TERM
+          EOF
+
+      # الخطوة 7: تشغيل i3 تلقائي اول ما تفتح
+      - name: Setup i3 autostart
+        run: |
+          sudo tee rootfs/root/.bash_profile > /dev/null <<'EOF'
+          if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+            exec startx
+          fi
+          EOF
+
+      # الخطوة 8: اعدادات i3 + الاختصارات
+      - name: Setup i3 config
+        run: |
+          sudo mkdir -p rootfs/etc/skel/.config/i3/
+          sudo tee rootfs/etc/skel/.config/i3/config > /dev/null <<'EOF'
+          # KSO-HANI V34.FINAL11 - مشروع [KSO]
+          # برمجة عبد الله و عبد الرحمن هاني
+          set $mod Mod4
+          font pango:Noto Sans Arabic 10
+          # Win+Enter = فتح تيرمنال
+          bindsym $mod+Return exec --no-startup-id xterm
+          # Win+G = تشغيل gnome-games
+          bindsym $mod+g exec --no-startup-id gnome-games
+          # Win+M = تشغيل minetest
+          bindsym $mod+m exec --no-startup-id minetest
+          # Win+Q = اغلاق الجهاز فورا
+          bindsym $mod+q exec --no-startup-id shutdown -h now
+          EOF
+
+      # الخطوة 9: بناء ملف الـ ISO
+      - name: Create ISO
+        run: |
+          sudo mksquashfs rootfs filesystem.squashfs -e boot
+          mkdir -p iso/boot/grub
+          cp filesystem.squashfs iso/
+          echo "set timeout=0" | sudo tee iso/boot/grub/grub.cfg
+          echo "menuentry 'KSO-HANI V34.FINAL11' { linux /vmlinuz boot=casper toram quiet splash nomodeset ---; initrd /initrd.img }" | sudo tee -a iso/boot/grub/grub.cfg
+          sudo grub-mkrescue -o KSO-HANI-V34-FINAL11.iso iso
+
+      # الخطوة 10: رفع ملف الـ ISO عشان تحمله
+      - name: Upload ISO Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KSO-HANI-V34-FINAL11.iso
+          path: KSO-HANI-V34-FINAL11.iso
