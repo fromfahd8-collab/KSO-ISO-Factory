@@ -1,4 +1,4 @@
-name: Build KSO-HANI V34.FINAL11 ISO
+name: Build KSO-HANI V34.FINAL16 ISO
 
 on:
   workflow_dispatch:
@@ -13,15 +13,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin syslinux-utils mtools python3-pip
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Python dependencies
-        run: pip install pyyaml
+          sudo apt-get install -y debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin syslinux-utils mtools
 
       - name: Build base system with debootstrap
         run: |
@@ -43,7 +35,6 @@ jobs:
           xinit \
           xserver-xorg \
           initramfs-tools \
-          locales \
           sudo \
           bash \
           coreutils \
@@ -51,52 +42,55 @@ jobs:
           xterm
           "
 
-      - name: Setup autologin for root
+      - name: Setup autologin + i3 + اسمكم
         run: |
           sudo mkdir -p rootfs/etc/systemd/system/getty@tty1.service.d/
-          sudo tee rootfs/etc/systemd/system/getty@tty1.service.d/autologin.conf > /dev/null <<'EOF'
-          [Service]
+          echo '[Service]
           ExecStart=
-          ExecStart=-/sbin/agetty --autologin root --noclear %I $TERM
-          EOF
+          ExecStart=-/sbin/agetty --autologin root --noclear %I $TERM' | sudo tee rootfs/etc/systemd/system/getty@tty1.service.d/autologin.conf > /dev/null
 
-      - name: Setup i3 autostart
-        run: |
-          sudo tee rootfs/root/.bash_profile > /dev/null <<'EOF'
-          if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+          echo 'if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
             exec startx
-          fi
-          EOF
+          fi' | sudo tee rootfs/root/.bash_profile > /dev/null
 
-      - name: Setup i3 config
-        run: |
           sudo mkdir -p rootfs/etc/skel/.config/i3/
-          sudo tee rootfs/etc/skel/.config/i3/config > /dev/null <<'EOF'
-          # KSO-HANI V34.FINAL11 - مشروع [KSO]
+          echo '# KSO-HANI V34.FINAL16 - مشروع [KSO]
           # برمجة عبد الله و عبد الرحمن هاني
           set $mod Mod4
           font pango:Noto Sans 10
           bindsym $mod+Return exec --no-startup-id xterm
           bindsym $mod+g exec --no-startup-id gnome-games
           bindsym $mod+m exec --no-startup-id minetest
-          bindsym $mod+q exec --no-startup-id shutdown -h now
-          EOF
+          bindsym $mod+q exec --no-startup-id shutdown -h now' | sudo tee rootfs/etc/skel/.config/i3/config > /dev/null
 
-      - name: Create ISO
+          echo 'echo "========================================="
+          echo " برمجة عبد الله و عبد الرحمن هاني [KSO]"
+          echo " KSO-HANI V34.FINAL16" 
+          echo "========================================="' | sudo tee -a rootfs/etc/skel/.bashrc > /dev/null
+
+      - name: Create ISO - اسمكم في قايمة البوت GRUB
         run: |
           sudo mksquashfs rootfs filesystem.squashfs -e boot
           mkdir -p iso/boot/grub
           cp filesystem.squashfs iso/
           sudo cp rootfs/boot/vmlinuz-* iso/vmlinuz
           sudo cp rootfs/boot/initrd.img-* iso/initrd.img
-          echo 'set timeout=5' | sudo tee iso/boot/grub/grub.cfg
-          echo 'set menu_color_normal=white/black' | sudo tee -a iso/boot/grub/grub.cfg
-          echo 'set menu_color_highlight=black/light-gray' | sudo tee -a iso/boot/grub/grub.cfg
-          echo 'menuentry "برمجة عبد الله و عبد الرحمن هاني [KSO]" { linux /vmlinuz boot=casper toram quiet splash nomodeset ---; initrd /initrd.img }' | sudo tee -a iso/boot/grub/grub.cfg
-          sudo grub-mkrescue -o KSO-HANI-V34-FINAL11.iso iso
+
+          # اهم حاجة: EOF لازق في اول السطر مفيش مسافة قبله
+          echo 'set timeout=5
+          set default=0
+          set menu_color_normal=white/black
+          set menu_color_highlight=black/light-gray
+          
+          menuentry "برمجة عبد الله و عبد الرحمن هاني [KSO] - V34.FINAL16" {
+            linux /vmlinuz boot=live toram quiet splash
+            initrd /initrd.img
+          }' | sudo tee iso/boot/grub/grub.cfg > /dev/null
+
+          sudo grub-mkrescue -o KSO-HANI-V34-FINAL16.iso iso
 
       - name: Upload ISO Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: KSO-HANI-V34-FINAL11.iso
-          path: KSO-HANI-V34-FINAL11.iso
+          name: KSO-HANI-V34-FINAL16.iso
+          path: KSO-HANI-V34-FINAL16.iso
